@@ -1,45 +1,36 @@
----@brief
----
---- https://github.com/golang/tools/tree/master/gopls
----
---- Google's lsp server for golang.
-
+local util = require("lspconfig.util")
+local async = require("lspconfig.async")
 local mod_cache = nil
 
----@param fname string
----@return string?
-local function get_root(fname)
-	if mod_cache and fname:sub(1, #mod_cache) == mod_cache then
-		local clients = vim.lsp.get_clients({ name = "gopls" })
-		if #clients > 0 then
-			return clients[#clients].config.root_dir
-		end
-	end
-	return vim.fs.root(fname, "go.work") or vim.fs.root(fname, "go.mod") or vim.fs.root(fname, ".git")
-end
-
 return {
-	cmd = { "gopls" },
-	filetypes = { "go", "gomod", "gowork", "gotmpl" },
-	root_dir = function(bufnr, on_dir)
-		local fname = vim.api.nvim_buf_get_name(bufnr)
-		-- see: https://github.com/neovim/nvim-lspconfig/issues/804
-		if mod_cache then
-			on_dir(get_root(fname))
-			return
-		end
-		local cmd = { "go", "env", "GOMODCACHE" }
-		vim.system(cmd, { text = true }, function(output)
-			if output.code == 0 then
-				if output.stdout then
-					mod_cache = vim.trim(output.stdout)
+	default_config = {
+		cmd = { "gopls" },
+		filetypes = { "go", "gomod", "gowork", "gotmpl" },
+		root_dir = function(fname)
+			-- see: https://github.com/neovim/nvim-lspconfig/issues/804
+			if not mod_cache then
+				local result = async.run_command({ "go", "env", "GOMODCACHE" })
+				if result and result[1] then
+					mod_cache = vim.trim(result[1])
+				else
+					mod_cache = vim.fn.system("go env GOMODCACHE")
 				end
-				on_dir(get_root(fname))
-			else
-				vim.schedule(function()
-					vim.notify(("[gopls] cmd failed with code %d: %s\n%s"):format(output.code, cmd, output.stderr))
-				end)
 			end
-		end)
-	end,
+			if mod_cache and fname:sub(1, #mod_cache) == mod_cache then
+				local clients = vim.lsp.get_clients({ name = "gopls" })
+				if #clients > 0 then
+					return clients[#clients].config.root_dir
+				end
+			end
+			return util.root_pattern("go.work", "go.mod", ".git")(fname)
+		end,
+		single_file_support = true,
+	},
+	docs = {
+		description = [[
+https://github.com/golang/tools/tree/master/gopls
+
+Google's lsp server for golang.
+]],
+	},
 }

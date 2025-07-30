@@ -44,11 +44,15 @@ return {
 			vim.lsp.enable("lua-language-server")
 			vim.lsp.enable("pyright")
 			vim.lsp.enable("copilot-language-server")
+			vim.lsp.enable("vscode-html-language-server")
+			vim.lsp.enable("vscode-css-language-server")
+			vim.lsp.enable("clangd")
+			vim.lsp.enable("docker-langserver")
+			vim.lsp.enable("docker-compose-langserver")
 
 			vim.api.nvim_create_autocmd("LspAttach", {
 				desc = "LSP actions",
 				callback = function(args)
-					local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
 					local opts = { buffer = args.buf }
 
 					vim.keymap.set("n", "K", "<cmd>lua vim.lsp.buf.hover()<cr>", opts)
@@ -88,6 +92,7 @@ return {
 		build = ":TSUpdate",
 		ensure_installed = {
 			"c",
+			"html",
 			"lua",
 			"vim",
 			"vimdoc",
@@ -117,6 +122,13 @@ return {
 		dependencies = { "giuxtaposition/blink-cmp-copilot" },
 		build = "cargo build --release",
 		version = "1.*",
+		copmletion = {
+			list = {
+				selection = {
+					preselect = false,
+				},
+			},
+		},
 		opts = {
 			keymap = { preset = "super-tab" },
 			sources = {
